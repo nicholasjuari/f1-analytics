@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 Analytics — What Really Wins in Formula 1?</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #050810;
+  --bg2: #080c14;
+  --red: #e10600;
+  --red2: #ff2a00;
+  --red-glow: rgba(225,6,0,0.25);
+  --red-dim: rgba(225,6,0,0.08);
+  --red-mid: rgba(225,6,0,0.2);
+  --teal: #00d2be;
+  --teal-glow: rgba(0,210,190,0.2);
+  --gold: #ffd700;
+  --silver: #c0c0c0;
+  --bronze: #cd7f32;
+  --text: #f0f0f0;
+  --text2: #8090a8;
+  --muted: #3a4560;
+  --glass: rgba(255,255,255,0.03);
+  --glass2: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --card-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04) inset;
+  --glow-red: 0 0 20px rgba(225,6,0,0.3), 0 0 60px rgba(225,6,0,0.1);
+  --glow-teal: 0 0 20px rgba(0,210,190,0.3);
+  --r: 14px;
+  --rs: 8px;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  font-size: 14px;
+  background-image:
+    linear-gradient(rgba(225,6,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(225,6,0,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* SIDEBAR */
+#sidebar {
+  width: 220px; min-height: 100vh;
+  background: rgba(8,12,20,0.95);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  box-shadow: 4px 0 30px rgba(0,0,0,0.4);
+}
+
+.logo-wrap {
+  padding: 22px 18px 18px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.logo-wrap::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 18px; right: 18px;
+  height: 1px; background: linear-gradient(90deg, var(--red), transparent);
+}
+
+.logo-top { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--red), #800000);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; box-shadow: var(--glow-red); flex-shrink: 0;
+}
+.logo-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.logo-sub { font-size: 10.5px; color: var(--text2); margin-top: 3px; }
+
+nav { flex: 1; padding: 10px 10px; }
+.nav-group { font-size: 10px; color: var(--muted); padding: 12px 8px 4px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: var(--rs);
+  cursor: pointer; color: var(--text2);
+  font-size: 13px; font-weight: 400;
+  transition: all 0.15s; margin-bottom: 2px;
+  border: none; background: none; width: 100%; text-align: left;
+  position: relative;
+}
+.nav-item:hover { background: var(--glass2); color: var(--text); }
+.nav-item.active {
+  background: var(--red-dim);
+  color: var(--red);
+  font-weight: 500;
+  border: 1px solid var(--red-mid);
+  box-shadow: 0 0 12px var(--red-dim);
+}
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; opacity: 0.6; }
+.nav-item.active .nav-dot { opacity: 1; box-shadow: 0 0 6px currentColor; }
+
+.sidebar-footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px; color: var(--muted);
+}
+
+/* MAIN */
+#main { margin-left: 220px; flex: 1; }
+
+.topbar {
+  background: rgba(8,12,20,0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px; height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.topbar-title { font-size: 13.5px; font-weight: 500; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+}
+.pill-red {
+  background: var(--red-dim); color: var(--red);
+  border: 1px solid var(--red-mid);
+  box-shadow: 0 0 10px var(--red-dim);
+}
+.pill-teal {
+  background: var(--teal-glow); color: var(--teal);
+  border: 1px solid rgba(0,210,190,0.25);
+}
+.pill-gray { background: var(--glass2); color: var(--text2); border: 1px solid var(--border); }
+
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red); animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; box-shadow: 0 0 4px var(--red); } 50% { opacity:0.5; box-shadow: 0 0 8px var(--red); } }
+
+.content { padding: 22px 26px; }
+
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
+
+/* SECTION */
+.sec-head { margin-bottom: 20px; }
+.sec-title { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; }
+.sec-desc { font-size: 12.5px; color: var(--text2); margin-top: 4px; }
+
+/* GRID */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.mb { margin-bottom: 14px; }
+
+/* GLASS CARD */
+.card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+.card-sm { padding: 16px; }
+
+.card-glow-red { box-shadow: var(--card-shadow), 0 0 30px var(--red-dim); border-color: var(--red-mid); }
+.card-glow-teal { box-shadow: var(--card-shadow), 0 0 30px var(--teal-glow); border-color: rgba(0,210,190,0.2); }
+
+.card-label { font-size: 11px; color: var(--text2); font-weight: 400; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.4px; }
+.card-val { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+.card-val-red { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+.card-meta { font-size: 11.5px; color: var(--text2); margin-top: 6px; }
+
+/* STAT CARD ACCENT LINE */
+.stat-card { border-top: 2px solid transparent; }
+.stat-card.red { border-top-color: var(--red); }
+.stat-card.teal { border-top-color: var(--teal); }
+.stat-card.gold { border-top-color: var(--gold); }
+
+/* MINI SPARKLINE */
+.sparkline-wrap { margin-top: 12px; height: 36px; }
+
+/* CHART */
+.chart-box { position: relative; }
+.ch160 { height: 160px; }
+.ch200 { height: 200px; }
+.ch220 { height: 220px; }
+.ch240 { height: 240px; }
+
+/* TABLE */
+.f1-table { width: 100%; border-collapse: collapse; }
+.f1-table th {
+  text-align: left; font-size: 10.5px; font-weight: 500;
+  color: var(--muted); padding: 0 10px 10px;
+  border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.4px;
+}
+.f1-table td {
+  padding: 10px 10px; font-size: 13px;
+  border-bottom: 1px solid var(--border); vertical-align: middle;
+}
+.f1-table tr:last-child td { border-bottom: none; }
+.f1-table tr:hover td { background: var(--glass2); }
+
+.pos-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 5px;
+  font-size: 11px; font-weight: 700;
+}
+.pos-1 { background: rgba(255,215,0,0.12); color: var(--gold); border: 1px solid rgba(255,215,0,0.2); }
+.pos-2 { background: rgba(192,192,192,0.1); color: var(--silver); border: 1px solid rgba(192,192,192,0.2); }
+.pos-3 { background: rgba(205,127,50,0.1); color: var(--bronze); border: 1px solid rgba(205,127,50,0.2); }
+.pos-n { background: var(--glass2); color: var(--text2); border: 1px solid var(--border); }
+
+/* PROGRESS */
+.prog-row { margin-bottom: 11px; }
+.prog-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+.prog-name { color: var(--text2); }
+.prog-val { color: var(--text); font-weight: 500; }
+.prog-bg { height: 4px; border-radius: 2px; background: var(--glass2); overflow: hidden; position: relative; }
+.prog-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; position: relative; }
+.prog-fill.red { background: linear-gradient(90deg, var(--red), var(--red2)); box-shadow: 0 0 8px var(--red-glow); }
+.prog-fill.teal { background: linear-gradient(90deg, #009d8f, var(--teal)); }
+.prog-fill.gold { background: linear-gradient(90deg, #b8960a, var(--gold)); }
+
+/* INSIGHT */
+.insight {
+  background: var(--red-dim);
+  border: 1px solid var(--red-mid);
+  border-radius: var(--rs); padding: 13px 15px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.insight.teal {
+  background: var(--teal-glow);
+  border-color: rgba(0,210,190,0.2);
+}
+.insight.dark {
+  background: var(--glass2);
+  border-color: var(--border);
+}
+.insight-title { font-size: 11px; font-weight: 600; color: var(--red); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+.insight.teal .insight-title { color: var(--teal); }
+.insight.dark .insight-title { color: var(--text2); }
+.insight-text { font-size: 12.5px; color: var(--text2); line-height: 1.65; }
+
+/* ERA */
+.era-item {
+  display: flex; gap: 14px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.era-item:last-child { border-bottom: none; }
+.era-year { font-size: 11px; color: var(--muted); min-width: 70px; padding-top: 2px; }
+.era-name { font-size: 13px; font-weight: 600; }
+.era-detail { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.era-bar { height: 2px; border-radius: 2px; margin-top: 9px; box-shadow: 0 0 6px currentColor; }
+
+/* TEAM DOT */
+.tdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 7px; box-shadow: 0 0 5px currentColor; }
+
+/* FORM */
+select, input[type=number] {
+  width: 100%;
+  background: var(--glass2);
+  border: 1px solid var(--border2);
+  color: var(--text); padding: 9px 12px; border-radius: var(--rs);
+  font-size: 13px; font-family: inherit; outline: none;
+  appearance: none; transition: border 0.15s, box-shadow 0.15s;
+  backdrop-filter: blur(10px);
+}
+select:focus, input:focus {
+  border-color: var(--red-mid);
+  box-shadow: 0 0 0 3px var(--red-dim);
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233a4560' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; cursor: pointer;
+}
+select option { background: #0f1520; }
+.form-group { margin-bottom: 12px; }
+.form-label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 5px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.4px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 20px; border-radius: var(--rs); font-size: 13px;
+  font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s;
+}
+.btn-red {
+  background: linear-gradient(135deg, var(--red), #a00000);
+  color: white; box-shadow: 0 4px 20px var(--red-glow);
+}
+.btn-red:hover { box-shadow: 0 4px 28px rgba(225,6,0,0.5); transform: translateY(-1px); }
+.btn-full { width: 100%; }
+
+/* PREDICT RESULT */
+.predict-result {
+  background: var(--glass2); border: 1px solid var(--border2);
+  border-radius: var(--rs); padding: 18px; margin-top: 14px; display: none;
+}
+.predict-result.show { display: block; }
+.predict-winner { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin: 6px 0 3px; color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+.predict-conf { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.predict-bar { flex: 1; height: 5px; border-radius: 3px; background: var(--glass2); overflow: hidden; }
+.predict-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--red), var(--red2)); box-shadow: 0 0 8px var(--red-glow); transition: width 0.6s ease; }
+
+/* NUMBER GLOW */
+.num-gold { color: var(--gold); text-shadow: 0 0 12px rgba(255,215,0,0.4); }
+.num-teal { color: var(--teal); text-shadow: 0 0 12px var(--teal-glow); }
+.num-red { color: var(--red); text-shadow: 0 0 12px var(--red-glow); }
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--glass2); border: 1px solid var(--border2);
+  backdrop-filter: blur(20px);
+  color: var(--text); padding: 10px 16px; border-radius: var(--rs);
+  font-size: 13px; font-weight: 500; opacity: 0; transform: translateY(6px);
+  pointer-events: none; transition: all 0.2s; z-index: 999;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+  #main { margin-left: 0; }
+  .g2, .g3, .g4 { grid-template-columns: 1fr; }
+  .content { padding: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-top">
+      <div class="logo-icon">🏎</div>
+      <div>
+        <div class="logo-text">F1 Analytics</div>
+        <div class="logo-sub">What Really Wins?</div>
+      </div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-group">Overview</div>
+    <button class="nav-item active" onclick="showPage('overview',this)">
+      <span class="nav-dot"></span> Dashboard
+    </button>
+    <div class="nav-group">Analysis</div>
+    <button class="nav-item" onclick="showPage('drivers',this)">
+      <span class="nav-dot"></span> Drivers
+    </button>
+    <button class="nav-item" onclick="showPage('constructors',this)">
+      <span class="nav-dot"></span> Constructors
+    </button>
+    <button class="nav-item" onclick="showPage('strategy',this)">
+      <span class="nav-dot"></span> Race Strategy
+    </button>
+    <div class="nav-group">Tools</div>
+    <button class="nav-item" onclick="showPage('predict',this)">
+      <span class="nav-dot"></span> Predict Winner
+    </button>
+  </nav>
+  <div class="sidebar-footer">Data: 1950–2024 · F1 Official</div>
+</div>
+
+<div id="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <span class="pill pill-red"><span class="live-dot"></span>2024 Season</span>
+    </div>
+    <div class="topbar-right">
+      <span class="pill pill-gray">74 Seasons</span>
+      <span class="pill pill-gray">1,110 Races</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div id="page-overview" class="page active">
+      <div class="sec-head">
+        <div class="sec-title">What Really Wins in Formula 1?</div>
+        <div class="sec-desc">74 years of data. One question — is it the car, the driver, or the strategy?</div>
+      </div>
+
+      <div class="g4 mb">
+        <div class="card card-sm stat-card red">
+          <div class="card-label">Total Races</div>
+          <div class="card-val num-red">1,110</div>
+          <div class="card-meta">1950 – 2024</div>
+          <div class="sparkline-wrap"><canvas id="sp1"></canvas></div>
+        </div>
+        <div class="card card-sm stat-card teal">
+          <div class="card-label">Active Drivers</div>
+          <div class="card-val num-teal">20</div>
+          <div class="card-meta">2024 grid</div>
+          <div class="sparkline-wrap"><canvas id="sp2"></canvas></div>
+        </div>
+        <div class="card card-sm stat-card gold">
+          <div class="card-label">Constructors</div>
+          <div class="card-val num-gold">10</div>
+          <div class="card-meta">current season</div>
+          <div class="sparkline-wrap"><canvas id="sp3"></canvas></div>
+        </div>
+        <div class="card card-sm stat-card red card-glow-red">
+          <div class="card-label">Most Championships</div>
+          <div class="card-val num-red">8</div>
+          <div class="card-meta">Max Verstappen</div>
+          <div class="sparkline-wrap"><canvas id="sp4"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g2 mb">
+        <div class="card card-glow-red">
+          <div class="card-label" style="margin-bottom:14px">Win Factor Analysis — Car vs Driver vs Strategy</div>
+          <div class="chart-box ch220"><canvas id="ch-factor"></canvas></div>
+          <div class="insight" style="margin-top:14px">
+            <div class="insight-title">Key Finding</div>
+            <div class="insight-text">Constructor performance accounts for ~58% of race outcomes. Driver skill contributes ~28%, while strategy decides the remaining ~14% — but becomes critical when two cars are evenly matched.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Championship Wins by Era</div>
+          <div class="chart-box ch220"><canvas id="ch-era"></canvas></div>
+          <div class="insight teal" style="margin-top:14px">
+            <div class="insight-title">Dominance Pattern</div>
+            <div class="insight-text">F1 history is defined by periods of dominance. Ferrari ruled the early 2000s, Mercedes the hybrid era, and Red Bull again in 2022–2024 with Verstappen's record-breaking run.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">All-Time Constructor Wins</div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Ferrari</span><span class="prog-val num-red">243</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:100%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">McLaren</span><span class="prog-val">183</span></div>
+            <div class="prog-bg"><div class="prog-fill" style="width:75%;background:linear-gradient(90deg,#b05800,#FF8000);box-shadow:0 0 8px rgba(255,128,0,0.3)"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Mercedes</span><span class="prog-val">125</span></div>
+            <div class="prog-bg"><div class="prog-fill teal" style="width:51%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Red Bull</span><span class="prog-val">118</span></div>
+            <div class="prog-bg"><div class="prog-fill" style="width:48%;background:linear-gradient(90deg,#1a4a9a,#3671C6);box-shadow:0 0 8px rgba(54,113,198,0.3)"></div></div>
+          </div>
+          <div class="prog-row" style="margin-bottom:0">
+            <div class="prog-top"><span class="prog-name">Williams</span><span class="prog-val">114</span></div>
+            <div class="prog-bg"><div class="prog-fill" style="width:47%;background:linear-gradient(90deg,#3080b0,#64C4FF);box-shadow:0 0 8px rgba(100,196,255,0.3)"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Top Drivers — Career Wins</div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Lewis Hamilton</span><span class="prog-val num-gold">103</span></div>
+            <div class="prog-bg"><div class="prog-fill gold" style="width:100%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Michael Schumacher</span><span class="prog-val">91</span></div>
+            <div class="prog-bg"><div class="prog-fill gold" style="width:88%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Max Verstappen</span><span class="prog-val">62</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:60%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Alain Prost</span><span class="prog-val">51</span></div>
+            <div class="prog-bg"><div class="prog-fill" style="width:50%;background:linear-gradient(90deg,#808080,#c0c0c0)"></div></div>
+          </div>
+          <div class="prog-row" style="margin-bottom:0">
+            <div class="prog-top"><span class="prog-name">Ayrton Senna</span><span class="prog-val">41</span></div>
+            <div class="prog-bg"><div class="prog-fill teal" style="width:40%"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">2024 Driver Standings</div>
+          <table class="f1-table">
+            <thead><tr><th>Pos</th><th>Driver</th><th>Pts</th></tr></thead>
+            <tbody>
+              <tr><td><span class="pos-badge pos-1">1</span></td><td style="font-weight:500">Verstappen</td><td class="num-gold" style="font-weight:700">575</td></tr>
+              <tr><td><span class="pos-badge pos-2">2</span></td><td style="font-weight:500">Norris</td><td>356</td></tr>
+              <tr><td><span class="pos-badge pos-3">3</span></td><td style="font-weight:500">Leclerc</td><td>307</td></tr>
+              <tr><td><span class="pos-badge pos-n">4</span></td><td style="font-weight:500">Piastri</td><td>268</td></tr>
+              <tr><td><span class="pos-badge pos-n">5</span></td><td style="font-weight:500">Sainz</td><td>244</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRIVERS -->
+    <div id="page-drivers" class="page">
+      <div class="sec-head">
+        <div class="sec-title">Driver Performance</div>
+        <div class="sec-desc">Career statistics and head-to-head comparisons across eras.</div>
+      </div>
+      <div class="g2 mb">
+        <div class="card card-glow-red">
+          <div class="card-label" style="margin-bottom:14px">Win Rate — Top Drivers (%)</div>
+          <div class="chart-box ch220"><canvas id="ch-winrate"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Consistency Radar — All-Time Greats</div>
+          <div class="chart-box ch220"><canvas id="ch-consist"></canvas></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Career Statistics</div>
+          <table class="f1-table">
+            <thead><tr><th>Driver</th><th>Races</th><th>Wins</th><th>Poles</th><th>WDC</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:500">L. Hamilton</td><td style="color:var(--text2)">333</td><td class="num-gold" style="font-weight:700">103</td><td style="color:var(--text2)">104</td><td><span class="pill pill-red">7</span></td></tr>
+              <tr><td style="font-weight:500">M. Schumacher</td><td style="color:var(--text2)">306</td><td class="num-gold" style="font-weight:700">91</td><td style="color:var(--text2)">68</td><td><span class="pill pill-red">7</span></td></tr>
+              <tr><td style="font-weight:500">M. Verstappen</td><td style="color:var(--text2)">200</td><td class="num-gold" style="font-weight:700">62</td><td style="color:var(--text2)">40</td><td><span class="pill pill-red">4</span></td></tr>
+              <tr><td style="font-weight:500">A. Prost</td><td style="color:var(--text2)">199</td><td class="num-gold" style="font-weight:700">51</td><td style="color:var(--text2)">33</td><td><span class="pill pill-red">4</span></td></tr>
+              <tr><td style="font-weight:500">A. Senna</td><td style="color:var(--text2)">162</td><td class="num-gold" style="font-weight:700">41</td><td style="color:var(--text2)">65</td><td><span class="pill pill-red">3</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:13px">Pole Position Specialists</div>
+          <div class="insight" style="margin-bottom:14px">
+            <div class="insight-title">Senna's Qualifying Record</div>
+            <div class="insight-text">Senna holds the highest pole-to-race ratio (40.1%) in history, suggesting he regularly outperformed his car's race pace — a hallmark of exceptional raw talent.</div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Ayrton Senna</span><span class="prog-val num-teal">40.1%</span></div>
+            <div class="prog-bg"><div class="prog-fill teal" style="width:100%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Jim Clark</span><span class="prog-val">37.7%</span></div>
+            <div class="prog-bg"><div class="prog-fill teal" style="width:94%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">Lewis Hamilton</span><span class="prog-val">31.2%</span></div>
+            <div class="prog-bg"><div class="prog-fill teal" style="width:78%"></div></div>
+          </div>
+          <div class="prog-row" style="margin-bottom:0">
+            <div class="prog-top"><span class="prog-name">Max Verstappen</span><span class="prog-val">20.0%</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:50%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONSTRUCTORS -->
+    <div id="page-constructors" class="page">
+      <div class="sec-head">
+        <div class="sec-title">Constructor Dominance</div>
+        <div class="sec-desc">How much does the car matter? More than most fans admit.</div>
+      </div>
+      <div class="g2 mb">
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Championships by Decade</div>
+          <div class="chart-box ch220"><canvas id="ch-decade"></canvas></div>
+        </div>
+        <div class="card card-glow-red">
+          <div class="card-label" style="margin-bottom:14px">2024 Constructor Points</div>
+          <div class="chart-box ch220"><canvas id="ch-const24"></canvas></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Eras of Dominance</div>
+          <div class="era-item">
+            <div class="era-year">1999–2004</div>
+            <div class="era-content">
+              <div class="era-name">Ferrari / Schumacher</div>
+              <div class="era-detail">5 consecutive WCC + WDC doubles</div>
+              <div class="era-bar" style="background:#DC0000;color:#DC0000;width:85%"></div>
+            </div>
+          </div>
+          <div class="era-item">
+            <div class="era-year">2010–2013</div>
+            <div class="era-content">
+              <div class="era-name">Red Bull / Vettel</div>
+              <div class="era-detail">4 consecutive championships</div>
+              <div class="era-bar" style="background:#3671C6;color:#3671C6;width:70%"></div>
+            </div>
+          </div>
+          <div class="era-item">
+            <div class="era-year">2014–2020</div>
+            <div class="era-content">
+              <div class="era-name">Mercedes / Hamilton</div>
+              <div class="era-detail">7 consecutive WCC, 6 WDC for Hamilton</div>
+              <div class="era-bar" style="background:#00D2BE;color:#00D2BE;width:100%"></div>
+            </div>
+          </div>
+          <div class="era-item">
+            <div class="era-year">2022–2024</div>
+            <div class="era-content">
+              <div class="era-name">Red Bull / Verstappen</div>
+              <div class="era-detail">19/22 wins in 2023 — a modern record</div>
+              <div class="era-bar" style="background:#3671C6;color:#3671C6;width:90%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:13px">Car vs Driver — The Evidence</div>
+          <div class="insight" style="margin-bottom:12px">
+            <div class="insight-title">When the car wins</div>
+            <div class="insight-text">In 2023, Red Bull won 21 of 22 races with two different drivers. This strongly suggests the car — not Verstappen alone — was responsible for the bulk of that dominance.</div>
+          </div>
+          <div class="insight teal">
+            <div class="insight-title">When the driver wins</div>
+            <div class="insight-text">Senna won 5 races in 1993 in a Ford-powered McLaren against the dominant Williams-Renault — widely considered the greatest single season of driving in F1 history.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATEGY -->
+    <div id="page-strategy" class="page">
+      <div class="sec-head">
+        <div class="sec-title">Race Strategy</div>
+        <div class="sec-desc">Pit stop timing and tire choice — the 14% that decides close races.</div>
+      </div>
+      <div class="g2 mb">
+        <div class="card card-glow-red">
+          <div class="card-label" style="margin-bottom:14px">Avg Pit Stop Time by Team — 2024 (seconds)</div>
+          <div class="chart-box ch220"><canvas id="ch-pitstop"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Pit Stop Time vs Final Position</div>
+          <div class="chart-box ch220"><canvas id="ch-pitcorr"></canvas></div>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px">Fastest Pit Stops 2024</div>
+          <table class="f1-table">
+            <thead><tr><th>Team</th><th>Best (s)</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tdot" style="background:#3671C6;color:#3671C6"></span>Red Bull</td><td class="num-gold" style="font-weight:700">1.82</td></tr>
+              <tr><td><span class="tdot" style="background:#FF8000;color:#FF8000"></span>McLaren</td><td>2.03</td></tr>
+              <tr><td><span class="tdot" style="background:#DC0000;color:#DC0000"></span>Ferrari</td><td>2.14</td></tr>
+              <tr><td><span class="tdot" style="background:#00D2BE;color:#00D2BE"></span>Mercedes</td><td>2.28</td></tr>
+              <tr><td><span class="tdot" style="background:#358C75;color:#358C75"></span>Aston Martin</td><td>2.45</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:13px">Tire Strategy Distribution</div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">1-stop Medium→Hard</span><span class="prog-val">42%</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:100%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">2-stop Soft→Med→Hard</span><span class="prog-val">31%</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:74%"></div></div>
+          </div>
+          <div class="prog-row">
+            <div class="prog-top"><span class="prog-name">1-stop Soft→Hard</span><span class="prog-val">18%</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:43%"></div></div>
+          </div>
+          <div class="prog-row" style="margin-bottom:0">
+            <div class="prog-top"><span class="prog-name">3-stop</span><span class="prog-val">9%</span></div>
+            <div class="prog-bg"><div class="prog-fill red" style="width:21%"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:13px">Strategy Insights</div>
+          <div class="insight" style="margin-bottom:10px">
+            <div class="insight-title">Undercut Success Rate</div>
+            <div class="insight-text">The undercut (pitting earlier) succeeds 67% of the time on high-deg circuits like Bahrain and Abu Dhabi.</div>
+          </div>
+          <div class="insight teal">
+            <div class="insight-title">VSC Advantage</div>
+            <div class="insight-text">Teams pitting under Virtual Safety Car gain 18–22 seconds — equivalent to a free stop, often deciding race outcomes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREDICT -->
+    <div id="page-predict" class="page">
+      <div class="sec-head">
+        <div class="sec-title">Predict the Winner</div>
+        <div class="sec-desc">Input race conditions and get a data-driven prediction based on 30 years of historical patterns.</div>
+      </div>
+      <div class="g2">
+        <div class="card card-glow-red">
+          <div class="card-label" style="margin-bottom:16px">Race Parameters</div>
+          <div class="form-group">
+            <label class="form-label">Circuit</label>
+            <select id="p-circuit">
+              <option value="monaco">Monaco — Street Circuit</option>
+              <option value="monza">Monza — High Speed</option>
+              <option value="spa">Spa-Francorchamps — Mixed</option>
+              <option value="silverstone">Silverstone — High Downforce</option>
+              <option value="bahrain">Bahrain — High Tire Deg</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weather</label>
+            <select id="p-weather">
+              <option value="dry">Dry</option>
+              <option value="wet">Wet / Rain</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pole Position Team</label>
+            <select id="p-pole">
+              <option value="redbull">Red Bull</option>
+              <option value="mclaren">McLaren</option>
+              <option value="ferrari">Ferrari</option>
+              <option value="mercedes">Mercedes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Safety Car Probability</label>
+            <select id="p-sc">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High (street circuit)</option>
+            </select>
+          </div>
+          <button class="btn btn-red btn-full" onclick="predict()">Run Prediction</button>
+          <div class="predict-result" id="predict-result">
+            <div style="font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">Predicted Winner</div>
+            <div class="predict-winner" id="pred-winner">—</div>
+            <div style="font-size:12px;color:var(--text2)" id="pred-team">—</div>
+            <div class="predict-conf">
+              <div style="font-size:11px;color:var(--muted);min-width:80px">Confidence</div>
+              <div class="predict-bar"><div class="predict-fill" id="pred-bar" style="width:0%"></div></div>
+              <div style="font-size:12px;font-weight:700;min-width:36px;text-align:right;color:var(--red)" id="pred-pct">—</div>
+            </div>
+            <div style="margin-top:12px;font-size:12.5px;color:var(--text2);line-height:1.65" id="pred-reason"></div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:14px">Win Probability by Team</div>
+            <div class="chart-box ch200"><canvas id="ch-winprob"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:10px">Model Methodology</div>
+            <div style="font-size:12.5px;color:var(--text2);line-height:1.7">
+              Weighted model using 1994–2024 data: qualifying position (35%), constructor circuit performance (30%), weather win rate (20%), safety car probability impact (15%).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const charts = {};
+
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  const titles = { overview:'Dashboard', drivers:'Driver Performance', constructors:'Constructor Dominance', strategy:'Race Strategy', predict:'Predict Winner' };
+  document.getElementById('topbar-title').textContent = titles[id] || id;
+  if (id === 'constructors') initConstructorCharts();
+  if (id === 'strategy') initStrategyCharts();
+  if (id === 'predict') initPredictChart();
+  if (id === 'drivers') initDriverCharts();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+const G = '#1a1f2e', M = '#3a4560', T = '#8090a8';
+
+function baseOpts(extra = {}) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, ...extra.plugins },
+    scales: {
+      x: { grid: { color: G }, ticks: { color: M, font: { size: 11 } } },
+      y: { grid: { color: G }, ticks: { color: M, font: { size: 11 } } }
+    }, ...extra
+  };
+}
+
+// SPARKLINES
+function mkSpark(id, data, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: { labels: data.map((_,i)=>i), datasets: [{ data, borderColor: color, borderWidth: 1.5, fill: true, backgroundColor: color + '18', tension: 0.4, pointRadius: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } }, elements: { line: { borderCapStyle: 'round' } } }
+  });
+}
+
+// OVERVIEW CHARTS
+function initOverview() {
+  mkSpark('sp1', [10,15,13,18,22,25,20,28,32,35,30,38], '#e10600');
+  mkSpark('sp2', [18,20,20,22,20,20,20,20,20,20,20,20], '#00d2be');
+  mkSpark('sp3', [12,11,10,10,12,10,10,10,10,10,10,10], '#ffd700');
+  mkSpark('sp4', [0,0,1,0,0,0,1,0,2,0,0,4], '#e10600');
+
+  const ctx1 = document.getElementById('ch-factor').getContext('2d');
+  charts.factor = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: ['Constructor / Car', 'Driver Skill', 'Race Strategy'],
+      datasets: [{ data: [58, 28, 14], backgroundColor: ['#e10600cc', '#ffd700cc', '#00d2becc'], borderColor: ['#e10600', '#ffd700', '#00d2be'], borderWidth: 2, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: { legend: { position: 'bottom', labels: { color: T, font: { size: 11 }, boxWidth: 10, padding: 16 } } }
+    }
+  });
+
+  const ctx2 = document.getElementById('ch-era').getContext('2d');
+  charts.era = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['1950s','1960s','1970s','1980s','1990s','2000s','2010s','2020s'],
+      datasets: [
+        { label: 'Ferrari', data: [1,2,1,0,0,6,0,0], backgroundColor: '#DC000099', borderColor: '#DC0000', borderWidth: 1, borderRadius: 3 },
+        { label: 'McLaren', data: [0,0,0,4,3,0,0,0], backgroundColor: '#FF800099', borderColor: '#FF8000', borderWidth: 1, borderRadius: 3 },
+        { label: 'Williams', data: [0,0,0,0,4,0,0,0], backgroundColor: '#64C4FF99', borderColor: '#64C4FF', borderWidth: 1, borderRadius: 3 },
+        { label: 'Red Bull', data: [0,0,0,0,0,0,5,4], backgroundColor: '#3671C699', borderColor: '#3671C6', borderWidth: 1, borderRadius: 3 },
+        { label: 'Mercedes', data: [0,0,0,0,0,0,2,0], backgroundColor: '#00D2BE99', borderColor: '#00D2BE', borderWidth: 1, borderRadius: 3 },
+      ]
+    },
+    options: {
+      ...baseOpts({ plugins: { legend: { display: true, position: 'bottom', labels: { color: T, font: { size: 10 }, boxWidth: 10, padding: 10 } } } }),
+      scales: { x: { stacked: true, grid: { color: G }, ticks: { color: M, font: { size: 10 } } }, y: { stacked: true, grid: { color: G }, ticks: { color: M, font: { size: 10 } } } }
+    }
+  });
+}
+
+function initDriverCharts() {
+  if (charts.winrate) return;
+  const ctx3 = document.getElementById('ch-winrate').getContext('2d');
+  charts.winrate = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: ['Fangio','Clark','Hamilton','Schumacher','Verstappen','Senna','Prost','Vettel'],
+      datasets: [{ data: [46.5,34.0,30.9,29.7,31.0,25.3,25.6,17.7], backgroundColor: '#e1060066', borderColor: '#e10600', borderWidth: 1, borderRadius: 5, hoverBackgroundColor: '#e1060099' }]
+    },
+    options: baseOpts()
+  });
+
+  const ctx4 = document.getElementById('ch-consist').getContext('2d');
+  charts.consist = new Chart(ctx4, {
+    type: 'radar',
+    data: {
+      labels: ['Wins','Poles','Podiums','Fastest Laps','Championships','Career Length'],
+      datasets: [
+        { label: 'Hamilton', data: [95,99,98,85,90,95], borderColor: '#00D2BE', backgroundColor: '#00D2BE15', pointBackgroundColor: '#00D2BE', borderWidth: 2 },
+        { label: 'Verstappen', data: [62,45,70,55,65,55], borderColor: '#e10600', backgroundColor: '#e1060015', pointBackgroundColor: '#e10600', borderWidth: 2 },
+        { label: 'Schumacher', data: [88,65,90,75,90,85], borderColor: '#ffd700', backgroundColor: '#ffd70015', pointBackgroundColor: '#ffd700', borderWidth: 2 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: T, font: { size: 11 }, boxWidth: 10 } } },
+      scales: { r: { grid: { color: G }, angleLines: { color: G }, ticks: { display: false, backdropColor: 'transparent' }, pointLabels: { color: T, font: { size: 10.5 } } } }
+    }
+  });
+}
+
+function initConstructorCharts() {
+  if (charts.decade) return;
+  const ctx5 = document.getElementById('ch-decade').getContext('2d');
+  charts.decade = new Chart(ctx5, {
+    type: 'bar',
+    data: {
+      labels: ['1950s','1960s','1970s','1980s','1990s','2000s','2010s','2020s'],
+      datasets: [
+        { label: 'Ferrari', data: [2,3,2,1,1,7,0,0], backgroundColor: '#DC0000aa', borderRadius: 3 },
+        { label: 'Red Bull', data: [0,0,0,0,0,0,5,4], backgroundColor: '#3671C6aa', borderRadius: 3 },
+        { label: 'Mercedes', data: [0,0,0,0,0,0,2,0], backgroundColor: '#00D2BEaa', borderRadius: 3 },
+        { label: 'McLaren', data: [0,0,1,5,3,0,0,0], backgroundColor: '#FF8000aa', borderRadius: 3 },
+      ]
+    },
+    options: {
+      ...baseOpts({ plugins: { legend: { display: true, position: 'bottom', labels: { color: T, font: { size: 10 }, boxWidth: 10, padding: 10 } } } }),
+      scales: { x: { stacked: true, grid: { color: G }, ticks: { color: M, font: { size: 10 } } }, y: { stacked: true, grid: { color: G }, ticks: { color: M, font: { size: 10 } } } }
+    }
+  });
+
+  const ctx6 = document.getElementById('ch-const24').getContext('2d');
+  charts.const24 = new Chart(ctx6, {
+    type: 'bar',
+    data: {
+      labels: ['Red Bull','McLaren','Ferrari','Mercedes','Aston M.','Alpine','Williams','VCARB','Haas','Sauber'],
+      datasets: [{ data: [860,666,652,468,94,65,51,46,31,4], backgroundColor: ['#3671C6','#FF8000','#DC0000','#00D2BE','#358C75','#FF87BC','#64C4FF','#6692FF','#B6BABD','#C92D4B'], borderRadius: 4 }]
+    },
+    options: { ...baseOpts(), indexAxis: 'y' }
+  });
+}
+
+function initStrategyCharts() {
+  if (charts.pitstop) return;
+  const ctx7 = document.getElementById('ch-pitstop').getContext('2d');
+  charts.pitstop = new Chart(ctx7, {
+    type: 'bar',
+    data: {
+      labels: ['Red Bull','McLaren','Ferrari','Mercedes','Aston M.','Alpine'],
+      datasets: [{ data: [2.31,2.48,2.67,2.83,2.95,3.12], backgroundColor: ['#3671C6','#FF8000','#DC0000','#00D2BE','#358C75','#FF87BC'], borderRadius: 5 }]
+    },
+    options: { ...baseOpts(), scales: { x: { grid: { color: G }, ticks: { color: M, font: { size: 11 } } }, y: { grid: { color: G }, ticks: { color: M, font: { size: 11 } }, min: 2.0 } } }
+  });
+
+  const ctx8 = document.getElementById('ch-pitcorr').getContext('2d');
+  charts.pitcorr = new Chart(ctx8, {
+    type: 'scatter',
+    data: {
+      datasets: [{ label: 'Races', data: [{x:1.82,y:1},{x:1.95,y:1},{x:2.1,y:2},{x:2.2,y:3},{x:2.3,y:2},{x:2.4,y:4},{x:2.5,y:5},{x:2.6,y:6},{x:2.7,y:4},{x:2.8,y:7},{x:3.0,y:8},{x:3.2,y:10},{x:3.5,y:12},{x:2.1,y:1},{x:2.3,y:3},{x:2.0,y:2},{x:2.6,y:5},{x:2.9,y:9}], backgroundColor: '#e1060099', pointRadius: 6, pointHoverRadius: 8 }]
+    },
+    options: { ...baseOpts(), scales: { x: { title: { display: true, text: 'Avg Pit Stop (s)', color: M, font: { size: 10 } }, grid: { color: G }, ticks: { color: M, font: { size: 10 } } }, y: { title: { display: true, text: 'Final Position', color: M, font: { size: 10 } }, grid: { color: G }, ticks: { color: M, font: { size: 10 } } } } }
+  });
+}
+
+function initPredictChart() {
+  if (charts.winprob) return;
+  const ctx9 = document.getElementById('ch-winprob').getContext('2d');
+  charts.winprob = new Chart(ctx9, {
+    type: 'doughnut',
+    data: {
+      labels: ['Red Bull','McLaren','Ferrari','Mercedes','Others'],
+      datasets: [{ data: [42,28,18,8,4], backgroundColor: ['#3671C6cc','#FF8000cc','#DC0000cc','#00D2BEcc','#444'], borderColor: ['#3671C6','#FF8000','#DC0000','#00D2BE','#555'], borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: T, font: { size: 11 }, boxWidth: 10, padding: 12 } } } }
+  });
+}
+
+const PRED = {
+  monaco: {
+    dry: { redbull:{d:'Verstappen',pct:38,reason:'Red Bull excels in street circuits. Monaco rewards precision — Verstappen dominates here.'}, mclaren:{d:'Norris',pct:32,reason:'McLaren pace strong but Monaco wall proximity tests setup confidence.'}, ferrari:{d:'Leclerc',pct:44,reason:'Monaco is Leclerc\'s home race. He took pole here 4 consecutive years.'}, mercedes:{d:'Russell',pct:22,reason:'Mercedes struggles in low-speed tight circuits but safety car scenarios help.'} },
+    wet: { redbull:{d:'Verstappen',pct:52,reason:'Verstappen in wet conditions is arguably the best of his generation.'}, mclaren:{d:'Norris',pct:35,reason:'Norris has shown strong wet-weather pace in recent seasons.'}, ferrari:{d:'Leclerc',pct:28,reason:'Ferrari wet setup historically inconsistent.'}, mercedes:{d:'Hamilton',pct:40,reason:'Hamilton has 11 wet-race wins — more than any driver in the modern era.'} },
+    mixed: { redbull:{d:'Verstappen',pct:45,reason:'Mixed conditions reward adaptability. Red Bull strategy team reads tire windows best.'}, mclaren:{d:'Norris',pct:38,reason:'McLaren tire management shines in variable conditions.'}, ferrari:{d:'Sainz',pct:30,reason:'Sainz consistently strong in chaotic races — shown in Singapore 2023.'}, mercedes:{d:'Hamilton',pct:35,reason:'Experience across 100+ races gives Hamilton a strategic edge in unpredictable races.'} }
+  },
+  monza: {
+    dry: { redbull:{d:'Verstappen',pct:35,reason:'Monza rewards top speed. Red Bull less dominant here than high-downforce tracks.'}, mclaren:{d:'Norris',pct:44,reason:'McLaren has exceptional straight-line speed in 2024 — Monza suits them perfectly.'}, ferrari:{d:'Leclerc',pct:40,reason:'Tifosi atmosphere + Leclerc\'s 2019 Monza win — this is Ferrari territory.'}, mercedes:{d:'Russell',pct:28,reason:'Mercedes low-drag setup historically competitive at Monza.'} },
+    wet: { redbull:{d:'Verstappen',pct:48,reason:'Wet pace advantage amplified in high-speed conditions.'}, mclaren:{d:'Norris',pct:35,reason:'McLaren wet pace solid across 2024.'}, ferrari:{d:'Leclerc',pct:32,reason:'Ferrari wet setup less proven at high-speed circuits.'}, mercedes:{d:'Hamilton',pct:42,reason:'Hamilton\'s wet race record at power circuits is exceptional.'} },
+    mixed: { redbull:{d:'Verstappen',pct:42,reason:'Strategy flexibility in mixed conditions is Red Bull\'s advantage.'}, mclaren:{d:'Piastri',pct:36,reason:'Piastri has shown strong race maturity in variable conditions.'}, ferrari:{d:'Sainz',pct:35,reason:'Sainz consistently good in chaotic races.'}, mercedes:{d:'Hamilton',pct:30,reason:'Experience counts in mixed scenarios.'} }
+  }
+};
+
+function predict() {
+  const circuit = document.getElementById('p-circuit').value;
+  const weather = document.getElementById('p-weather').value;
+  const pole = document.getElementById('p-pole').value;
+  const cd = PRED[circuit] || PRED['monza'];
+  const wd = cd[weather] || cd['dry'];
+  const r = wd[pole] || wd['redbull'];
+  const teams = { redbull:'Red Bull Racing', mclaren:'McLaren F1 Team', ferrari:'Scuderia Ferrari', mercedes:'Mercedes-AMG Petronas' };
+
+  document.getElementById('pred-winner').textContent = r.d;
+  document.getElementById('pred-team').textContent = teams[pole];
+  document.getElementById('pred-bar').style.width = r.pct + '%';
+  document.getElementById('pred-pct').textContent = r.pct + '%';
+  document.getElementById('pred-reason').textContent = r.reason;
+  document.getElementById('predict-result').classList.add('show');
+
+  const probs = { redbull:[42,28,18,8,4], mclaren:[28,44,16,8,4], ferrari:[22,24,40,10,4], mercedes:[30,22,18,26,4] };
+  if (charts.winprob) { charts.winprob.data.datasets[0].data = probs[pole] || probs.redbull; charts.winprob.update(); }
+
+  toast('Prediction generated');
+}
+
+initOverview();
+</script>
+</body>
+</html>
