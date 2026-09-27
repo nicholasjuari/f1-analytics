@@ -1,6 +1,6 @@
 # F1 Analytics
 
-An interactive dashboard that answers one question: **what really wins in Formula 1 — the car, the driver, or the strategy?**
+An interactive dashboard that answers one question: **what really wins in Formula 1 the car, the driver, or the strategy?**
 
 Built with HTML, CSS, and JavaScript. No frameworks, no backend needed.
 
