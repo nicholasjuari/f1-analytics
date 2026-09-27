@@ -10,10 +10,10 @@ Built with HTML, CSS, and JavaScript. No frameworks, no backend needed.
 
 ## Features
 
-- Win factor breakdown — car vs driver vs strategy (based on 74 years of data)
+- Win factor breakdown car vs driver vs strategy (based on 74 years of data)
 - Driver performance comparison across eras
 - Constructor dominance timeline
-- Race strategy analysis — pit stop timing and tire choice
+- Race strategy analysis pit stop timing and tire choice
 - Race winner predictor based on circuit, weather, and qualifying position
 
 ## Tech Stack
